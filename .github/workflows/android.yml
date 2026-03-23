@@ -32,10 +32,11 @@ jobs:
           rm -rf baby_tracker_temp
           mv lib.bak lib
           mv pubspec.yaml.bak pubspec.yaml
+          # Clear pubspec.lock to force fresh deps
+          rm -f pubspec.lock
 
       - name: Install dependencies
         run: |
-          flutter clean
           flutter pub get
 
       - name: Build debug APK
