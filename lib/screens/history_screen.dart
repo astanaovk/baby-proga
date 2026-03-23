@@ -59,7 +59,7 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
         children: [
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            color: Theme.of(context).colorScheme.surface,
             child: Center(
               child: Text(
                 DateFormat('yyyy年MM月dd日').format(_selectedDate),
