@@ -135,7 +135,7 @@ class _SleepScreenState extends State<SleepScreen> {
             ...records.map((r) => Card(
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.purple.withValues(alpha: 0.15),
+                  backgroundColor: Colors.purple.withOpacity(0.15),
                   child: const Icon(Icons.bedtime, color: Colors.purple),
                 ),
                 title: Text('${_fmt(r.startTime)} 开始'),

@@ -160,7 +160,7 @@ class _FeedingScreenState extends State<FeedingScreen> {
     return Card(
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _typeColor(r.type).withValues(alpha: 0.15),
+          backgroundColor: _typeColor(r.type).withOpacity(0.15),
           child: Icon(_typeIcon(r.type), color: _typeColor(r.type)),
         ),
         title: Text(r.typeName),

@@ -99,7 +99,7 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
         return Card(
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.blue.withValues(alpha: 0.1),
+              backgroundColor: Colors.blue.withOpacity(0.1),
               child: const Icon(Icons.local_drink, color: Colors.blue),
             ),
             title: Text(r.typeName),
@@ -131,7 +131,7 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
         return Card(
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.orange.withValues(alpha: 0.1),
+              backgroundColor: Colors.orange.withOpacity(0.1),
               child: const Icon(Icons.baby_changing_station, color: Colors.orange),
             ),
             title: Text(r.typeName),
@@ -163,7 +163,7 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
         return Card(
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.purple.withValues(alpha: 0.1),
+              backgroundColor: Colors.purple.withOpacity(0.1),
               child: const Icon(Icons.bedtime, color: Colors.purple),
             ),
             title: Text(r.isOngoing ? '睡眠中' : '睡眠'),

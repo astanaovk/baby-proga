@@ -155,7 +155,7 @@ class _MilestoneScreenState extends State<MilestoneScreen> {
     }
     return Card(
       child: ListTile(
-        leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.15), child: Icon(icon, color: color)),
+        leading: CircleAvatar(backgroundColor: color.withOpacity(0.15), child: Icon(icon, color: color)),
         title: Text('$emoji ${r.title}'),
         subtitle: Text('${r.date.month}/${r.date.day}${r.note != null ? '  ${r.note}' : ''}'),
         trailing: IconButton(
