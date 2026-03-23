@@ -17,7 +17,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.19.6'
           channel: 'stable'
           cache: true
 
@@ -32,26 +32,6 @@ jobs:
           rm -rf baby_tracker_temp
           mv lib.bak lib
           mv pubspec.yaml.bak pubspec.yaml
-
-      - name: Override Kotlin in build configuration
-        run: |
-          # Add Kotlin compatibility fixes
-          cat > android/gradle.properties << 'EOF'
-org.gradle.jvmargs=-Xmx2048m -Dkotlin.daemon.jvmargs=-Xmx1536m
-android.useAndroidX=true
-android.enableJetifier=true
-kotlin.daemon.jvmargs=-Xmx1536m
-kotlin.jvm.target.validation.mode=ignore
-kotlin.stdlib.default.dependency=false
-EOF
-          
-          # Also force JVM target in app build.gradle
-          if ! grep -q 'jvmTarget' android/app/build.gradle; then
-            sed -i '/compileOptions/a\        jvmTarget = "17"' android/app/build.gradle
-            sed -i '/kotlinOptions {/a\            jvmTarget = "17"' android/app/build.gradle
-          fi
-          
-          echo "Kotlin configuration updated"
 
       - name: Install dependencies
         run: |
