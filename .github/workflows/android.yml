@@ -26,9 +26,9 @@ jobs:
           # Create a temp project to get android/ folder, then restore our files
           mv pubspec.yaml pubspec.yaml.bak
           mv lib lib.bak
-          flutter create --platforms android --org com.babytracker baby-tracker-temp
-          mv baby-tracker-temp/android .
-          rm -rf baby-tracker-temp
+          flutter create --platforms android --org com.babytracker baby_tracker_temp
+          mv baby_tracker_temp/android .
+          rm -rf baby_tracker_temp
           mv lib.bak lib
           mv pubspec.yaml.bak pubspec.yaml
 
