@@ -21,7 +21,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.19.6'
           channel: 'stable'
           cache: true
 
@@ -43,15 +43,6 @@ jobs:
           mv lib.bak lib
           mv pubspec.yaml.bak pubspec.yaml
           rm -f pubspec.lock
-
-      - name: Update Kotlin version
-        run: |
-          if grep -q "kotlinVersion" android/settings.gradle; then
-            sed -i 's/kotlinVersion = .*/kotlinVersion = "1.9.22"/' android/settings.gradle
-          fi
-          if grep -q 'kotlin_version' android/build.gradle; then
-            sed -i 's/kotlin_version = .*/kotlin_version = "1.9.22"/' android/build.gradle
-          fi
 
       - name: Install dependencies
         run: flutter pub get
