@@ -1,5 +1,5 @@
-name: baby_tracker
-description: 宝宝喂养记录 App
+name: baby_record
+description: 宝宝成长记录 App
 publish_to: 'none'
 version: 3.0.0
 
