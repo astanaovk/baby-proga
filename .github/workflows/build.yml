@@ -30,8 +30,6 @@ jobs:
         run: |
           VERSION=$(grep "version:" pubspec.yaml | sed 's/version: //')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          APP_NAME=$(grep "^name:" pubspec.yaml | sed 's/name: //')
-          echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
 
       - name: Generate Android project structure
         run: |
@@ -49,50 +47,35 @@ jobs:
       - name: Set app name in AndroidManifest
         run: |
           sed -i 's/android:label="[^"]*"/android:label="宝宝记录"/g' android/app/src/main/AndroidManifest.xml
-          sed -i 's/android:label=/android:label="宝宝记录" \n            android:name=/g' android/app/src/main/AndroidManifest.xml 2>/dev/null || true
 
       - name: Create cartoon icon
+        env:
+          ICON_XML: |
+            <?xml version="1.0" encoding="utf-8"?>
+            <vector xmlns:android="http://schemas.android.com/apk/res/android"
+                android:width="108dp"
+                android:height="108dp"
+                android:viewportWidth="108"
+                android:viewportHeight="108">
+                <path android:fillColor="#E3F2FD" android:pathData="M54,54m-50,0a50,50 0,1 1,100 0a50,50 0,1 1,-100 0"/>
+                <path android:fillColor="#FFE0B2" android:pathData="M54,54m-35,0a35,35 0,1 1,70 0a35,35 0,1 1,-70 0"/>
+                <path android:fillColor="#90CAF9" android:pathData="M25,45 Q30,20 54,18 Q78,20 83,45 Q78,35 54,33 Q30,35 25,45"/>
+                <path android:pathData="M38,52 Q42,48 46,52" android:strokeWidth="2.5" android:strokeColor="#5D4037"/>
+                <path android:pathData="M62,52 Q66,48 70,52" android:strokeWidth="2.5" android:strokeColor="#5D4037"/>
+                <path android:fillColor="#FFAB91" android:fillAlpha="0.5" android:pathData="M30,58m-6,0a6,4 0,1 1,12 0a6,4 0,1 1,-12 0"/>
+                <path android:fillColor="#FFAB91" android:fillAlpha="0.5" android:pathData="M78,58m-6,0a6,4 0,1 1,12 0a6,4 0,1 1,-12 0"/>
+                <path android:pathData="M44,62 Q54,72 64,62" android:strokeWidth="2.5" android:strokeColor="#E57373"/>
+                <path android:fillColor="#FFD54F" android:pathData="M78,28 L80,34 L86,34 L81,38 L83,44 L78,40 L73,44 L75,38 L70,34 L76,34 Z"/>
+                <path android:fillColor="#F48FB1" android:pathData="M30,30 C27,27 22,27 22,32 C22,37 30,42 30,42 C30,42 38,37 38,32 C38,27 33,27 30,30"/>
+            </vector>
         run: |
           mkdir -p android/app/src/main/res/drawable
-          cat > android/app/src/main/res/drawable/ic_launcher.xml << 'ICON_EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path android:fillColor="#E3F2FD" android:pathData="M54,54m-50,0a50,50 0,1 1,100 0a50,50 0,1 1,-100 0"/>
-    <path android:fillColor="#FFE0B2" android:pathData="M54,54m-35,0a35,35 0,1 1,70 0a35,35 0,1 1,-70 0"/>
-    <path android:fillColor="#90CAF9" android:pathData="M25,45 Q30,20 54,18 Q78,20 83,45 Q78,35 54,33 Q30,35 25,45"/>
-    <path android:pathData="M38,52 Q42,48 46,52" android:strokeWidth="2.5" android:strokeColor="#5D4037"/>
-    <path android:pathData="M62,52 Q66,48 70,52" android:strokeWidth="2.5" android:strokeColor="#5D4037"/>
-    <path android:fillColor="#FFAB91" android:fillAlpha="0.5" android:pathData="M30,58m-6,0a6,4 0,1 1,12 0a6,4 0,1 1,-12 0"/>
-    <path android:fillColor="#FFAB91" android:fillAlpha="0.5" android:pathData="M78,58m-6,0a6,4 0,1 1,12 0a6,4 0,1 1,-12 0"/>
-    <path android:pathData="M44,62 Q54,72 64,62" android:strokeWidth="2.5" android:strokeColor="#E57373"/>
-    <path android:fillColor="#FFD54F" android:pathData="M78,28 L80,34 L86,34 L81,38 L83,44 L78,40 L73,44 L75,38 L70,34 L76,34 Z"/>
-    <path android:fillColor="#F48FB1" android:pathData="M30,30 C27,27 22,27 22,32 C22,37 30,42 30,42 C30,42 38,37 38,32 C38,27 33,27 30,30"/>
-</vector>
-ICON_EOF
-
-      - name: Create mipmap icons
-        run: |
-          # Copy vector icon to mipmap directories as a simple icon
+          echo "$ICON_XML" > android/app/src/main/res/drawable/ic_launcher.xml
           mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-mdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
           mkdir -p android/app/src/main/res/mipmap-xxhdpi
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-          
-          # Create a simple PNG placeholder using ImageMagick if available, otherwise use the vector
-          if command -v convert &> /dev/null; then
-            convert -size 48x48 xc:#90CAF9 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert -size 72x72 xc:#90CAF9 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert -size 96x96 xc:#90CAF9 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert -size 144x144 xc:#90CAF9 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert -size 192x192 xc:#90CAF9 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          fi
-          
-          # Copy vector to all mipmap as fallback (will work on most devices)
           cp android/app/src/main/res/drawable/ic_launcher.xml android/app/src/main/res/mipmap-hdpi/ic_launcher.xml
           cp android/app/src/main/res/drawable/ic_launcher.xml android/app/src/main/res/mipmap-mdpi/ic_launcher.xml
           cp android/app/src/main/res/drawable/ic_launcher.xml android/app/src/main/res/mipmap-xhdpi/ic_launcher.xml
@@ -129,7 +112,7 @@ ICON_EOF
           body: |
             ## 🍼 宝宝记录 v${{ steps.version.outputs.version }}
 
-            ### 功能更新
+            ### 更新内容
             - ✅ 全新卡通风格Logo
             - ✅ App名称改为"宝宝记录"
 
