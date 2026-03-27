@@ -16,6 +16,16 @@ class StatsScreen extends StatelessWidget {
     return h > 0 ? '${h}$hk${m}$mk' : '${m}$mk';
   }
 
+  String _formatInterval(int minutes, L10nService l10n) {
+    if (minutes < 60) {
+      return '$minutes${l10n.t('minutes')}';
+    } else {
+      final h = minutes ~/ 60;
+      final m = minutes % 60;
+      return '${h}${l10n.t('hours')}${m}${l10n.t('minutes')}';
+    }
+  }
+
   List<Map> _getWeekData(DataService ds, String type, L10nService l10n) {
     final now = DateTime.now();
     final result = <Map>[];
@@ -72,6 +82,9 @@ class StatsScreen extends StatelessWidget {
     final stats = ds.todayStats();
     final weekFeedings = _getWeekData(ds, 'feeding', l10n);
     final weekDiapers = _getWeekData(ds, 'diaper', l10n);
+    final frequencyStats = ds.getFrequencyStats();
+    final feedingIntervals = ds.getIntervals('feeding');
+    final diaperIntervals = ds.getIntervals('diaper');
 
     final feedingCount = stats['feedingCount'] ?? 0;
     final totalBottleMl = stats['totalBottleMl'] ?? 0;
@@ -112,6 +125,33 @@ class StatsScreen extends StatelessWidget {
                     children: [
                       _statCard(ls('sleep_duration2'), _formatSleep(totalSleepMinutes, l10n), Icons.bedtime, Colors.purple),
                       _statCard(ls('breast_duration'), '$totalBreastMinutes${ls('minutes')}', Icons.child_care, Colors.pink),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 本周频次统计
+          Text(ls('weekly_frequency'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      _statCard(ls('avg_per_day'), '${frequencyStats['avgFeedingPerDay']}${ls('times')}', Icons.local_drink, Colors.blue),
+                      _statCard(ls('avg_per_day'), '${frequencyStats['avgDiaperPerDay']}${ls('times')}', Icons.baby_changing_station, Colors.orange),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _statCard(ls('total_this_week'), '${frequencyStats['totalFeeding']}${ls('times')}', Icons.calendar_today, Colors.indigo),
+                      _statCard(ls('total_this_week'), '${frequencyStats['totalDiaper']}${ls('times')}', Icons.event, Colors.amber),
                     ],
                   ),
                 ],
@@ -223,6 +263,212 @@ class StatsScreen extends StatelessWidget {
                     gridData: const FlGridData(show: true, drawVerticalLine: false),
                   ),
                 ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 喂奶间隔时间
+          if (feedingIntervals.isNotEmpty) ...[
+            Text(ls('feeding_interval'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    // 平均间隔
+                    Row(
+                      children: [
+                        _statCard(
+                          ls('avg_interval'),
+                          _formatInterval(
+                            feedingIntervals.isEmpty ? 0 : feedingIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a + b) ~/ feedingIntervals.length,
+                            l10n
+                          ),
+                          Icons.timelapse,
+                          Colors.blue
+                        ),
+                        _statCard(
+                          ls('min_interval'),
+                          _formatInterval(
+                            feedingIntervals.isEmpty ? 0 : feedingIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a < b ? a : b),
+                            l10n
+                          ),
+                          Icons.speed,
+                          Colors.green
+                        ),
+                        _statCard(
+                          ls('max_interval'),
+                          _formatInterval(
+                            feedingIntervals.isEmpty ? 0 : feedingIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a > b ? a : b),
+                            l10n
+                          ),
+                          Icons.slow_motion_video,
+                          Colors.red
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // 最近几次间隔
+                    Text(ls('recent_intervals'), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: 8),
+                    ...feedingIntervals.reversed.take(5).map((interval) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${interval['from'].hour.toString().padLeft(2, '0')}:${interval['from'].minute.toString().padLeft(2, '0')} → ${interval['to'].hour.toString().padLeft(2, '0')}:${interval['to'].minute.toString().padLeft(2, '0')}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            _formatInterval(interval['minutes'] as int, l10n),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: (interval['minutes'] as int) < 60 ? Colors.blue : Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          // 尿布间隔时间
+          if (diaperIntervals.isNotEmpty) ...[
+            Text(ls('diaper_interval'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        _statCard(
+                          ls('avg_interval'),
+                          _formatInterval(
+                            diaperIntervals.isEmpty ? 0 : diaperIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a + b) ~/ diaperIntervals.length,
+                            l10n
+                          ),
+                          Icons.timelapse,
+                          Colors.orange
+                        ),
+                        _statCard(
+                          ls('min_interval'),
+                          _formatInterval(
+                            diaperIntervals.isEmpty ? 0 : diaperIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a < b ? a : b),
+                            l10n
+                          ),
+                          Icons.speed,
+                          Colors.green
+                        ),
+                        _statCard(
+                          ls('max_interval'),
+                          _formatInterval(
+                            diaperIntervals.isEmpty ? 0 : diaperIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a > b ? a : b),
+                            l10n
+                          ),
+                          Icons.slow_motion_video,
+                          Colors.red
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(ls('recent_intervals'), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: 8),
+                    ...diaperIntervals.reversed.take(5).map((interval) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${interval['from'].hour.toString().padLeft(2, '0')}:${interval['from'].minute.toString().padLeft(2, '0')} → ${interval['to'].hour.toString().padLeft(2, '0')}:${interval['to'].minute.toString().padLeft(2, '0')}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            _formatInterval(interval['minutes'] as int, l10n),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: (interval['minutes'] as int) < 60 ? Colors.orange : Colors.purple,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+
+          // 合并的事件列表（时间相近的记录）
+          Text(ls('merged_events'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${ls('merge_hint')}: ${DataService.mergeIntervalMinutes}${ls('minutes')}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  Builder(
+                    builder: (context) {
+                      final merged = ds.getMergedRecords();
+                      return Column(
+                        children: merged.take(10).map((item) {
+                          final time = item['time'] as DateTime;
+                          final type = item['type'] as String;
+                          final events = item['events'] as List?;
+                          
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  type == 'feeding' ? Icons.local_drink : Icons.baby_changing_station,
+                                  color: type == 'feeding' ? Colors.blue : Colors.orange,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} ${type == 'feeding' ? ls('feeding') : ls('diaper')}',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ),
+                                if (events != null && events.length > 1)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '+${events.length - 1}',
+                                      style: const TextStyle(fontSize: 11, color: Colors.green),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ),
