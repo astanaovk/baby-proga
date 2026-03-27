@@ -16,6 +16,13 @@ class StatsScreen extends StatelessWidget {
     return h > 0 ? '${h}$hk${m}$mk' : '${m}$mk';
   }
 
+  String _formatInterval(int minutes, L10nService l10n) {
+    if (minutes < 60) return '$minutes${l10n.t('minutes')}';
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return '${h}${l10n.t('hours')}${m}${l10n.t('minutes')}';
+  }
+
   List<Map> _getWeekData(DataService ds, String type, L10nService l10n) {
     final now = DateTime.now();
     final result = <Map>[];
@@ -59,6 +66,75 @@ class StatsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildMergedSection(List<Map<String, dynamic>> merged, L10nService l10n) {
+    if (merged.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.t('merged_events'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 4),
+        Text('${l10n.t('merge_hint')}: 10${l10n.t('minutes')}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 8),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: merged.take(10).map((item) {
+                final time = item['time'] as DateTime;
+                final type = item['type'] as String;
+                final events = item['events'] as List?;
+                final count = events != null ? events.length + 1 : 1;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Icon(type == 'feeding' ? Icons.local_drink : Icons.baby_changing_station,
+                          color: type == 'feeding' ? Colors.blue : Colors.orange, size: 20),
+                      const SizedBox(width: 8),
+                      Text('${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'),
+                      const SizedBox(width: 8),
+                      Text('$count${l10n.t('times2')}', style: TextStyle(color: Colors.grey[600])),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildIntervalSection(List<Map<String, dynamic>> intervals, String type, L10nService l10n) {
+    if (intervals.isEmpty) return const SizedBox.shrink();
+    final iconColor = type == 'feeding' ? Colors.blue : Colors.orange;
+    final avg = intervals.isEmpty ? 0 : intervals.map((e) => e['minutes'] as int).reduce((a, b) => a + b) ~/ intervals.length;
+    final minVal = intervals.isEmpty ? 0 : intervals.map((e) => e['minutes'] as int).reduce((a, b) => a < b ? a : b);
+    final maxVal = intervals.isEmpty ? 0 : intervals.map((e) => e['minutes'] as int).reduce((a, b) => a > b ? a : b);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(type == 'feeding' ? l10n.t('feeding_interval') : l10n.t('diaper_interval'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                _statCard(l10n.t('avg_interval'), _formatInterval(avg, l10n), Icons.timelapse, iconColor),
+                _statCard(l10n.t('min_interval'), _formatInterval(minVal, l10n), Icons.speed, Colors.green),
+                _statCard(l10n.t('max_interval'), _formatInterval(maxVal, l10n), Icons.slow_motion_video, Colors.red),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ds = context.watch<DataService>();
@@ -70,7 +146,6 @@ class StatsScreen extends StatelessWidget {
     final stats = ds.todayStats();
     final weekFeedings = _getWeekData(ds, 'feeding', l10n);
     final weekDiapers = _getWeekData(ds, 'diaper', l10n);
-    String ls(String k) => l10n.t(k);
 
     final feedingCount = stats['feedingCount'] ?? 0;
     final totalBottleMl = stats['totalBottleMl'] ?? 0;
@@ -81,12 +156,12 @@ class StatsScreen extends StatelessWidget {
     final totalBreastMinutes = stats['totalBreastMinutes'] ?? 0;
 
     return Scaffold(
-      appBar: AppBar(title: Text(ls('stats_title')), centerTitle: true),
+      appBar: AppBar(title: Text(l10n.t('stats_title')), centerTitle: true),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           // 今日概况
-          Text(ls('today_overview'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(l10n.t('today_overview'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
             child: Padding(
@@ -95,22 +170,22 @@ class StatsScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _statCard(ls('feeding_times'), '$feedingCount${ls('times2')}', Icons.local_drink, Colors.blue),
-                      _statCard(ls('total_milk'), '${totalBottleMl}ml', Icons.water_drop, Colors.cyan),
+                      _statCard(l10n.t('feeding_times'), '$feedingCount${l10n.t('times2')}', Icons.local_drink, Colors.blue),
+                      _statCard(l10n.t('total_milk'), '${totalBottleMl}ml', Icons.water_drop, Colors.cyan),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _statCard(ls('diaper_count'), '$diaperCount${ls('times2')}', Icons.baby_changing_station, Colors.orange),
-                      _statCard(ls('diaper_detail'), '$peeCount/$poopCount', Icons.show_chart, Colors.amber),
+                      _statCard(l10n.t('diaper_count'), '$diaperCount${l10n.t('times2')}', Icons.baby_changing_station, Colors.orange),
+                      _statCard(l10n.t('diaper_detail'), '$peeCount/$poopCount', Icons.show_chart, Colors.amber),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _statCard(ls('sleep_duration2'), _formatSleep(totalSleepMinutes, l10n), Icons.bedtime, Colors.purple),
-                      _statCard(ls('breast_duration'), '$totalBreastMinutes${ls('minutes')}', Icons.child_care, Colors.pink),
+                      _statCard(l10n.t('sleep_duration2'), _formatSleep(totalSleepMinutes, l10n), Icons.bedtime, Colors.purple),
+                      _statCard(l10n.t('breast_duration'), '$totalBreastMinutes${l10n.t('minutes')}', Icons.child_care, Colors.pink),
                     ],
                   ),
                 ],
@@ -119,118 +194,17 @@ class StatsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // 合并事件说明
-          if (merged.isNotEmpty) ...[
-            Text(ls('merged_events'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('${ls('merge_hint')}: 10${ls('minutes')}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-            const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: merged.take(10).map((item) {
-                    final time = item['time'] as DateTime;
-                    final type = item['type'] as String;
-                    final events = item['events'] as List?;
-                    final count = events != null ? events.length + 1 : 1;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Icon(type == 'feeding' ? Icons.local_drink : Icons.baby_changing_station,
-                              color: type == 'feeding' ? Colors.blue : Colors.orange, size: 20),
-                          const SizedBox(width: 8),
-                          Text('${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'),
-                          const SizedBox(width: 8),
-                          Text('$count${ls('times2')}', style: TextStyle(color: Colors.grey[600])),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
+          // 合并事件
+          _buildMergedSection(merged, l10n),
 
-          // 喂奶间隔统计
-          if (feedingIntervals.isNotEmpty) ...[
-            Text(ls('feeding_interval'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        _statCard(ls('avg_interval'),
-                          _formatInterval(feedingIntervals.isEmpty ? 0 :
-                            feedingIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a + b) ~/ feedingIntervals.length, l10n),
-                          Icons.timelapse, Colors.blue),
-                        _statCard(ls('min_interval'),
-                          _formatInterval(feedingIntervals.isEmpty ? 0 :
-                            feedingIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a < b ? a : b), l10n),
-                          Icons.speed, Colors.green),
-                        _statCard(ls('max_interval'),
-                          _formatInterval(feedingIntervals.isEmpty ? 0 :
-                            feedingIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a > b ? a : b), l10n),
-                          Icons.slow_motion_video, Colors.red),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: feedingIntervals.reversed.take(5).map((iv) {
-                        final from = iv['from'] as DateTime;
-                        return Chip(
-                          avatar: const Icon(Icons.access_time, size: 16),
-                          label: Text('${from.hour}:${from.minute.toString().padLeft(2,'0')} → ${iv['minutes']}min'),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
+          // 喂奶间隔
+          _buildIntervalSection(feedingIntervals, 'feeding', l10n),
 
-          // 换尿布间隔统计
-          if (diaperIntervals.isNotEmpty) ...[
-            Text(ls('diaper_interval'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        _statCard(ls('avg_interval'),
-                          _formatInterval(diaperIntervals.isEmpty ? 0 :
-                            diaperIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a + b) ~/ diaperIntervals.length, l10n),
-                          Icons.timelapse, Colors.orange),
-                        _statCard(ls('min_interval'),
-                          _formatInterval(diaperIntervals.isEmpty ? 0 :
-                            diaperIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a < b ? a : b), l10n),
-                          Icons.speed, Colors.amber),
-                        _statCard(ls('max_interval'),
-                          _formatInterval(diaperIntervals.isEmpty ? 0 :
-                            diaperIntervals.map((e) => e['minutes'] as int).reduce((a, b) => a > b ? a : b), l10n),
-                          Icons.slow_motion_video, Colors.deepOrange),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
+          // 换尿布间隔
+          _buildIntervalSection(diaperIntervals, 'diaper', l10n),
 
-          // 本周频次统计
-          Text(ls('weekly_frequency'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          // 本周频次
+          Text(l10n.t('weekly_frequency'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
             child: Padding(
@@ -239,15 +213,15 @@ class StatsScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _statCard(ls('avg_per_day'), '${freqStats['avgFeedingPerDay']}${ls('times2')}', Icons.local_drink, Colors.blue),
-                      _statCard(ls('total_this_week'), '${freqStats['totalFeeding']}${ls('times2')}', Icons.calendar_today, Colors.cyan),
+                      _statCard(l10n.t('avg_per_day'), '${freqStats['avgFeedingPerDay']}${l10n.t('times2')}', Icons.local_drink, Colors.blue),
+                      _statCard(l10n.t('total_this_week'), '${freqStats['totalFeeding']}${l10n.t('times2')}', Icons.calendar_today, Colors.cyan),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _statCard(ls('avg_per_day'), '${freqStats['avgDiaperPerDay']}${ls('times2')}', Icons.baby_changing_station, Colors.orange),
-                      _statCard(ls('total_this_week'), '${freqStats['totalDiaper']}${ls('times2')}', Icons.calendar_today, Colors.amber),
+                      _statCard(l10n.t('avg_per_day'), '${freqStats['avgDiaperPerDay']}${l10n.t('times2')}', Icons.baby_changing_station, Colors.orange),
+                      _statCard(l10n.t('total_this_week'), '${freqStats['totalDiaper']}${l10n.t('times2')}', Icons.calendar_today, Colors.amber),
                     ],
                   ),
                 ],
@@ -257,7 +231,7 @@ class StatsScreen extends StatelessWidget {
           const SizedBox(height: 16),
 
           // 近7天喂奶趋势
-          Text(ls('week_feeding_trend'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(l10n.t('week_feeding_trend'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
             child: Padding(
@@ -292,7 +266,7 @@ class StatsScreen extends StatelessWidget {
           const SizedBox(height: 16),
 
           // 近7天换尿布趋势
-          Text(ls('week_diaper_trend'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(l10n.t('week_diaper_trend'), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
             child: Padding(
