@@ -450,7 +450,7 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
           child: Icon(_typeIcon(r.type), color: _typeColor(r.type)),
         ),
         title: Text(r.typeName),
-        subtitle: Text('${_fmt(r.time)}  ${r.displayAmount}${r.breastSide != null ? ' (${r.breastSide == BreastSide.left ? ls('left_side') : ls('right_side')})' : ''}${r.note != null ? '  📝${r.note}' : ''}'),
+        subtitle: Text('${_fmt(r.time)}  ${r.displayAmount}${r.breastSide != null ? ' (${r.breastSide == BreastSide.left ? l10n.t('left_side') : l10n.t('right_side')})' : ''}${r.note != null ? '  📝${r.note}' : ''}'),
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline, color: Colors.red),
           onPressed: () => ds.deleteFeeding(r.id),
