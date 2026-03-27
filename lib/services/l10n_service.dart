@@ -359,7 +359,6 @@ class L10nService extends ChangeNotifier {
     'months': 'mo',
     'years': 'yr',
   };
-  };
 
   // ─────────────────────────────────────────────
   // Init & locale management
