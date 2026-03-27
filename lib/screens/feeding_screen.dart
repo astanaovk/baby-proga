@@ -20,9 +20,10 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
   final _noteController = TextEditingController();
   bool _isTimerRunning = false;
   int _breastSeconds = 0;
-  BreastSide _currentSide = BreastSide.left; // Default start with left
+  BreastSide _currentSide = BreastSide.left;
   bool _left15minAlerted = false;
   bool _right15minAlerted = false;
+  bool _useManualInput = false;
   
   DateTime? _timerStartTime;
   static const String _timerStartKey = 'feeding_timer_start';
@@ -54,7 +55,7 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
     if (startTimeStr != null) {
       final startTime = DateTime.parse(startTimeStr);
       final elapsed = DateTime.now().difference(startTime).inSeconds;
-      if (elapsed < 3600) { // Only restore if less than 1 hour
+      if (elapsed < 3600) {
         setState(() {
           _breastSeconds = elapsed;
           _isTimerRunning = true;
@@ -94,16 +95,14 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Resume: recalculate elapsed time
       _restoreTimerState();
     } else if (state == AppLifecycleState.paused) {
-      // Paused: save state
       _saveTimerState();
     }
   }
 
   void _check15MinAlert() {
-    const alertSeconds = 15 * 60; // 15 minutes
+    const alertSeconds = 15 * 60;
     
     if (_currentSide == BreastSide.left && _breastSeconds >= alertSeconds && !_left15minAlerted) {
       _left15minAlerted = true;
@@ -139,7 +138,9 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
       time: DateTime.now(),
       type: _selectedType,
       breastMinutes: _selectedType == FeedingType.breastDirect
-          ? (_minutesController.text.isNotEmpty ? int.tryParse(_minutesController.text) : _breastSeconds ~/ 60)
+          ? (_useManualInput 
+              ? (_minutesController.text.isNotEmpty ? int.tryParse(_minutesController.text) : 0)
+              : (_breastSeconds ~/ 60))
           : null,
       bottleMl: _selectedType != FeedingType.breastDirect
           ? int.tryParse(_mlController.text)
@@ -148,7 +149,6 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
       breastSide: _selectedType == FeedingType.breastDirect ? _currentSide : null,
     );
     await ds.addFeeding(record);
-    // Reset timer state after save
     setState(() {
       _breastSeconds = 0;
       _isTimerRunning = false;
@@ -166,6 +166,7 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
       _timerStartTime = DateTime.now();
       _left15minAlerted = false;
       _right15minAlerted = false;
+      _useManualInput = false;
     });
     Future.doWhile(() async {
       await Future.delayed(const Duration(seconds: 1));
@@ -181,16 +182,11 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
       if (_currentSide == BreastSide.left) {
         _currentSide = BreastSide.right;
         _right15minAlerted = false;
-        // Reset counter when switching sides
-        if (_isTimerRunning) {
-          _breastSeconds = 0;
-        }
+        if (_isTimerRunning) _breastSeconds = 0;
       } else {
         _currentSide = BreastSide.left;
         _left15minAlerted = false;
-        if (_isTimerRunning) {
-          _breastSeconds = 0;
-        }
+        if (_isTimerRunning) _breastSeconds = 0;
       }
     });
   }
@@ -260,105 +256,156 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
             const SizedBox(height: 16),
 
             if (_selectedType == FeedingType.breastDirect) ...[
-              // 母乳亲喂 - 计时器
-              // 左右侧选择
+              // 母乳亲喂 - 模式选择：计时器或手动输入
               Row(
                 children: [
-                  Text(ls('breast_side') + ': ', style: const TextStyle(fontSize: 16)),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: Text(ls('left_side')),
-                    selected: _currentSide == BreastSide.left,
-                    onSelected: (_) => setState(() {
-                      _currentSide = BreastSide.left;
-                      _left15minAlerted = false;
-                      if (_isTimerRunning) _breastSeconds = 0;
-                    }),
-                    avatar: _currentSide == BreastSide.left ? const Icon(Icons.check, size: 18) : null,
+                  FilterChip(
+                    label: Text(ls('use_timer')),
+                    selected: !_useManualInput,
+                    onSelected: (_) => setState(() => _useManualInput = false),
                   ),
                   const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: Text(ls('right_side')),
-                    selected: _currentSide == BreastSide.right,
-                    onSelected: (_) => setState(() {
-                      _currentSide = BreastSide.right;
-                      _right15minAlerted = false;
-                      if (_isTimerRunning) _breastSeconds = 0;
-                    }),
-                    avatar: _currentSide == BreastSide.right ? const Icon(Icons.check, size: 18) : null,
+                  FilterChip(
+                    label: Text(ls('manual_input')),
+                    selected: _useManualInput,
+                    onSelected: (_) => setState(() => _useManualInput = true),
                   ),
-                  const Spacer(),
-                  if (_isTimerRunning)
-                    TextButton.icon(
-                      onPressed: _switchSide,
-                      icon: const Icon(Icons.swap_horiz),
-                      label: Text(ls('switch_side')),
-                    ),
                 ],
               ),
               const SizedBox(height: 16),
-              // 计时器显示
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: (_currentSide == BreastSide.left ? Colors.pink : Colors.purple).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _currentSide == BreastSide.left ? Colors.pink : Colors.purple,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
+
+              if (!_useManualInput) ...[
+                // 计时器模式
+                // 左右侧选择
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    Text(
-                      '${_currentSide == BreastSide.left ? "左侧" : "右侧"}: ${_breastSeconds ~/ 60}${ls('minutes')}${_breastSeconds % 60}${ls('seconds')}',
-                      style: TextStyle(
-                        fontSize: 24, 
-                        fontWeight: FontWeight.bold,
-                        color: _currentSide == BreastSide.left ? Colors.pink : Colors.purple,
-                      ),
+                    Text(ls('breast_side') + ': ', style: const TextStyle(fontSize: 14)),
+                    ChoiceChip(
+                      label: Text(ls('left_side')),
+                      selected: _currentSide == BreastSide.left,
+                      onSelected: (_) => setState(() {
+                        _currentSide = BreastSide.left;
+                        _left15minAlerted = false;
+                        if (_isTimerRunning) _breastSeconds = 0;
+                      }),
+                      avatar: _currentSide == BreastSide.left ? const Icon(Icons.check, size: 18) : null,
                     ),
-                    if (_breastSeconds >= 15 * 60)
-                      Text(
-                        '✅ ' + ls('completed_15min'),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    ChoiceChip(
+                      label: Text(ls('right_side')),
+                      selected: _currentSide == BreastSide.right,
+                      onSelected: (_) => setState(() {
+                        _currentSide = BreastSide.right;
+                        _right15minAlerted = false;
+                        if (_isTimerRunning) _breastSeconds = 0;
+                      }),
+                      avatar: _currentSide == BreastSide.right ? const Icon(Icons.check, size: 18) : null,
+                    ),
+                    if (_isTimerRunning)
+                      ActionChip(
+                        avatar: const Icon(Icons.swap_horiz, size: 18),
+                        label: Text(ls('switch_side')),
+                        onPressed: _switchSide,
                       ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(children: [
-                const Spacer(),
-                if (_isTimerRunning)
-                  FilledButton.icon(
-                    onPressed: () => setState(() => _isTimerRunning = false),
-                    icon: const Icon(Icons.stop),
-                    label: Text(ls('stop_timer')),
-                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                  )
-                else
-                  FilledButton.icon(
-                    onPressed: () => _startTimer(),
-                    icon: const Icon(Icons.play_arrow),
-                    label: Text(ls('start_timer')),
+                const SizedBox(height: 16),
+                // 计时器显示
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: (_currentSide == BreastSide.left ? Colors.pink : Colors.purple).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _currentSide == BreastSide.left ? Colors.pink : Colors.purple,
+                      width: 2,
+                    ),
                   ),
-              ]),
-              const SizedBox(height: 8),
-              Center(
-                child: OutlinedButton(
-                  onPressed: () => setState(() { 
-                    _breastSeconds = 0; 
-                    _isTimerRunning = false; 
-                    _left15minAlerted = false;
-                    _right15minAlerted = false;
-                  }),
-                  child: Text(ls('reset')),
+                  child: Column(
+                    children: [
+                      Text(
+                        '${_currentSide == BreastSide.left ? "左侧" : "右侧"}: ${_breastSeconds ~/ 60}${ls('minutes')}${_breastSeconds % 60}${ls('seconds')}',
+                        style: TextStyle(
+                          fontSize: 24, 
+                          fontWeight: FontWeight.bold,
+                          color: _currentSide == BreastSide.left ? Colors.pink : Colors.purple,
+                        ),
+                      ),
+                      if (_breastSeconds >= 15 * 60)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '✅ ' + ls('completed_15min'),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isTimerRunning)
+                      FilledButton.icon(
+                        onPressed: () => setState(() => _isTimerRunning = false),
+                        icon: const Icon(Icons.stop),
+                        label: Text(ls('stop_timer')),
+                        style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                      )
+                    else
+                      FilledButton.icon(
+                        onPressed: () => _startTimer(),
+                        icon: const Icon(Icons.play_arrow),
+                        label: Text(ls('start_timer')),
+                      ),
+                    const SizedBox(width: 12),
+                    OutlinedButton(
+                      onPressed: () => setState(() { 
+                        _breastSeconds = 0; 
+                        _isTimerRunning = false; 
+                        _left15minAlerted = false;
+                        _right15minAlerted = false;
+                      }),
+                      child: Text(ls('reset')),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                // 手动输入模式
+                Row(
+                  children: [
+                    Text(ls('breast_side') + ': ', style: const TextStyle(fontSize: 14)),
+                    ChoiceChip(
+                      label: Text(ls('left_side')),
+                      selected: _currentSide == BreastSide.left,
+                      onSelected: (_) => setState(() => _currentSide = BreastSide.left),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: Text(ls('right_side')),
+                      selected: _currentSide == BreastSide.right,
+                      onSelected: (_) => setState(() => _currentSide = BreastSide.right),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _minutesController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: ls('duration_minutes'),
+                    border: const OutlineInputBorder(),
+                    suffixText: ls('minutes'),
+                  ),
+                ),
+              ],
             ] else ...[
               // 瓶喂/奶粉 - 输入量
               TextField(
@@ -403,7 +450,7 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
           child: Icon(_typeIcon(r.type), color: _typeColor(r.type)),
         ),
         title: Text(r.typeName),
-        subtitle: Text('${_fmt(r.time)}  ${r.displayAmount}${r.breastSide != null ? ' (${r.breastSide == BreastSide.left ? "左侧" : "右侧"})' : ''}${r.note != null ? '  📝${r.note}' : ''}'),
+        subtitle: Text('${_fmt(r.time)}  ${r.displayAmount}${r.breastSide != null ? ' (${r.breastSide == BreastSide.left ? ls('left_side') : ls('right_side')})' : ''}${r.note != null ? '  📝${r.note}' : ''}'),
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline, color: Colors.red),
           onPressed: () => ds.deleteFeeding(r.id),
@@ -412,5 +459,3 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
     );
   }
 }
-
-// BreastSide enum is now imported from feeding_record.dart

@@ -60,6 +60,9 @@ class L10nService extends ChangeNotifier {
     'right_side': '右侧',
     'switch_side': '换边',
     'completed_15min': '已完成 15 分钟',
+    'use_timer': '计时器',
+    'manual_input': '手动输入',
+    'duration_minutes': '时长（分钟）',
 
     // Diaper screen
     'diaper_record': '换尿布记录',
@@ -229,6 +232,9 @@ class L10nService extends ChangeNotifier {
     'right_side': 'Right',
     'switch_side': 'Switch',
     'completed_15min': '15 min completed',
+    'use_timer': 'Timer',
+    'manual_input': 'Manual',
+    'duration_minutes': 'Duration (min)',
 
     // Diaper screen
     'diaper_record': 'Diaper Record',
