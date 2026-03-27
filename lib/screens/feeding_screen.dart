@@ -413,4 +413,4 @@ class _FeedingScreenState extends State<FeedingScreen> with WidgetsBindingObserv
   }
 }
 
-enum BreastSide { left, right }
+// BreastSide enum is now imported from feeding_record.dart
