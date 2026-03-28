@@ -218,7 +218,9 @@ class DataService extends ChangeNotifier {
 
   // 间隔时间统计
   List<Map<String, dynamic>> getIntervals(String type) {
-    final records = type == 'feeding' ? _feedingRecords : _diaperRecords;
+    final List<FeedingRecord> feedingList = _feedingRecords;
+    final List<DiaperRecord> diaperList = _diaperRecords;
+    final records = type == 'feeding' ? feedingList : diaperList;
     if (records.length < 2) return [];
     final times = records.map((r) => r.time).toList()..sort();
     return [
@@ -239,13 +241,17 @@ class DataService extends ChangeNotifier {
     for (final f in _feedingRecords) {
       if (f.time.isAfter(weekStart)) {
         final key = '${f.time.month}/${f.time.day}';
-        if (dailyStats.containsKey(key)) dailyStats[key]!['feeding']++;
+        if (dailyStats.containsKey(key)) {
+          dailyStats[key]!['feeding'] = (dailyStats[key]!['feeding'] ?? 0) + 1;
+        }
       }
     }
     for (final d in _diaperRecords) {
       if (d.time.isAfter(weekStart)) {
         final key = '${d.time.month}/${d.time.day}';
-        if (dailyStats.containsKey(key)) dailyStats[key]!['diaper']++;
+        if (dailyStats.containsKey(key)) {
+          dailyStats[key]!['diaper'] = (dailyStats[key]!['diaper'] ?? 0) + 1;
+        }
       }
     }
     int totalFeeding = 0, totalDiaper = 0;
