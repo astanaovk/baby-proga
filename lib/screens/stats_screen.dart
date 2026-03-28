@@ -121,7 +121,9 @@ class StatsScreen extends StatelessWidget {
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _statCard(l10n.t('avg_interval'), _formatInterval(avg, l10n), Icons.timelapse, iconColor),
                 _statCard(l10n.t('min_interval'), _formatInterval(minVal, l10n), Icons.speed, Colors.green),

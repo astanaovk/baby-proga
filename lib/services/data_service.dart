@@ -188,32 +188,46 @@ class DataService extends ChangeNotifier {
   }
 
   // 合并时间相近的记录（10分钟内视为一组）
+  // 只合并同类型记录（如：左侧+右侧母乳，或多次奶粉），不同类型不合并（如喂奶+尿布）
   List<Map<String, dynamic>> getMergedRecords() {
-    final allRecords = <Map<String, dynamic>>[];
+    // 按类型分组分别处理
+    final feedingRecords = <Map<String, dynamic>>[];
     for (final f in _feedingRecords) {
-      allRecords.add({'time': f.time, 'type': 'feeding', 'record': f});
+      feedingRecords.add({'time': f.time, 'type': 'feeding', 'record': f});
     }
+    final diaperRecords = <Map<String, dynamic>>[];
     for (final d in _diaperRecords) {
-      allRecords.add({'time': d.time, 'type': 'diaper', 'record': d});
+      diaperRecords.add({'time': d.time, 'type': 'diaper', 'record': d});
     }
-    allRecords.sort((a, b) => (a['time'] as DateTime).compareTo(b['time'] as DateTime));
     
-    final merged = <Map<String, dynamic>>[];
-    for (final item in allRecords) {
-      if (merged.isEmpty) {
-        merged.add(item);
-      } else {
-        final last = merged.last;
-        final diff = (item['time'] as DateTime).difference(last['time'] as DateTime).inMinutes;
-        if (diff <= 10) {
-          if (last['events'] == null) last['events'] = [last];
-          (last['events'] as List).add(item);
+    // 合并同类记录
+    List<Map<String, dynamic>> mergeGroup(List<Map<String, dynamic>> records) {
+      if (records.isEmpty) return [];
+      records.sort((a, b) => (a['time'] as DateTime).compareTo(b['time'] as DateTime));
+      final merged = <Map<String, dynamic>>[];
+      for (final item in records) {
+        if (merged.isEmpty) {
+          merged.add({'time': item['time'], 'type': item['type'], 'events': [item]});
         } else {
-          merged.add(item);
+          final last = merged.last;
+          final diff = (item['time'] as DateTime).difference(last['time'] as DateTime).inMinutes;
+          if (diff <= 10) {
+            (last['events'] as List).add(item);
+          } else {
+            merged.add({'time': item['time'], 'type': item['type'], 'events': [item]});
+          }
         }
       }
+      return merged;
     }
-    return merged;
+    
+    final mergedFeeding = mergeGroup(feedingRecords);
+    final mergedDiaper = mergeGroup(diaperRecords);
+    
+    // 合并两组并按时间排序
+    final allMerged = [...mergedFeeding, ...mergedDiaper];
+    allMerged.sort((a, b) => (a['time'] as DateTime).compareTo(b['time'] as DateTime));
+    return allMerged;
   }
 
   // 间隔时间统计
